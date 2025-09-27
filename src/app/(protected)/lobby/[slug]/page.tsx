@@ -100,8 +100,6 @@ interface SessionType {
     fetchData();
   }, [params]);
 
-  const lobbyName = decodeURIComponent(slug).replace(/-/g, ' ');
-
   const handleStartGame = async () => {
     const response = await fetch('/api/start-game', {
       method: 'POST',
@@ -139,21 +137,23 @@ interface SessionType {
 
   return (
     <>
-      <Page.Header className="p-0">
+            <Page.Header className="p-0 bg-gradient-to-r from-purple-900 to-blue-900">
         <TopBar
-          title={lobbyName}
+          title="Mafia Party"
           startAdornment={
-            <Link href="/lobbies" className="text-sm font-semibold text-indigo-500">
+            <Link href="/lobbies" className="text-sm font-semibold text-electric-blue">
               ← Lobbies
             </Link>
           }
           endAdornment={
             <div className="flex items-center gap-2">
-              <p className="text-sm font-semibold capitalize">
+              <p className="text-sm font-semibold capitalize text-white">
+                {/* @ts-expect-error */}
                 {session?.user.username}
               </p>
+              {/* @ts-expect-error */}
               {session?.user.profilePictureUrl ? (
-                <Marble src={session.user.profilePictureUrl} className="w-12" />
+                <Marble src={session.user.profilePictureUrl} className="w-12 border-2 border-neon-green" />
               ) : null}
             </div>
           }

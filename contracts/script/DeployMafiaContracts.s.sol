@@ -15,7 +15,24 @@ import {InvestigateAbility} from "../src/abilities/InvestigateAbility.sol";
 import {RoleblockAbility} from "../src/abilities/RoleblockAbility.sol";
 
 contract DeployMafiaContracts {
-    function deploy() external returns (
+    function run() external returns (
+        address lobbyRegistry,
+        address phaseEngine,
+        address actionValidator,
+        address voteRegistry,
+        address nightRegistry,
+        address nightResolver,
+        address eliminationEngine,
+        address playerState,
+        address killAbility,
+        address protectAbility,
+        address investigateAbility,
+        address roleblockAbility
+    ) {
+        return deploy();
+    }
+
+    function deploy() public returns (
         address lobbyRegistry,
         address phaseEngine,
         address actionValidator,
