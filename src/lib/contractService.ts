@@ -23,7 +23,7 @@ export class ContractService {
     const address = CONTRACT_ADDRESSES[contractName];
     const abi = CONTRACT_ABIS[contractName as keyof typeof CONTRACT_ABIS];
     
-    if (!address || address === '0x0000000000000000000000000000000000000000') {
+    if (!address || (address as string) === '0x0000000000000000000000000000000000000000') {
       throw new Error(`Contract ${contractName} not deployed`);
     }
 

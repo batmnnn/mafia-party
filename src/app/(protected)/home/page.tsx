@@ -93,6 +93,30 @@ export default async function Home() {
         />
       </Page.Header>
       <Page.Main className="mb-20 flex flex-col gap-4">
+        <section className="rounded-2xl bg-gradient-to-r from-electric-blue to-neon-green p-6 text-white shadow-lg">
+          <h2 className="text-xl font-bold mb-3">🎭 Welcome to Mafia Party!</h2>
+          <p className="text-sm opacity-90 mb-4">
+            A thrilling social deduction game where you must identify mafia members hiding among the villagers.
+            Use strategy, deception, and deduction to win!
+          </p>
+          <div className="grid grid-cols-2 gap-4 text-sm">
+            <div>
+              <h3 className="font-semibold mb-2">🌙 Night Phase</h3>
+              <p className="opacity-80">Mafia eliminates players, special roles use abilities</p>
+            </div>
+            <div>
+              <h3 className="font-semibold mb-2">☀️ Day Phase</h3>
+              <p className="opacity-80">Discuss suspicions and vote to lynch players</p>
+            </div>
+          </div>
+          <Link
+            href="/guide"
+            className="inline-block mt-4 bg-soft-gold hover:bg-yellow-500 rounded-full px-4 py-2 font-semibold shadow-md transition-all transform hover:scale-105 text-black"
+          >
+            📖 Learn How to Play
+          </Link>
+        </section>
+
         <OverviewCards stats={overviewStats} />
 
         <section className="grid w-full gap-4 lg:grid-cols-[2fr,1fr]">

@@ -5,6 +5,7 @@ import { Page } from '@/components/PageLayout';
 import { TopBar } from '@worldcoin/mini-apps-ui-kit-react';
 import { useLobbies, LobbyRecord } from '@/hooks/useContracts';
 import { useMemo } from 'react';
+import Link from 'next/link';
 
 interface LobbyData {
   id: string;
@@ -84,10 +85,16 @@ export default function Lobbies() {
 
             {openLobbies.length === 0 && inProgress.length === 0 && (
               <div className="text-center py-8">
-                <div className="text-slate-500">No lobbies found</div>
-                <div className="text-sm text-slate-400 mt-2">
-                  Create a new lobby to get started
+                <div className="text-slate-500 mb-4">No lobbies found</div>
+                <div className="text-sm text-slate-400 mb-6">
+                  Create a new lobby to get started with your first game!
                 </div>
+                <Link
+                  href="/build"
+                  className="inline-block bg-gradient-to-r from-electric-blue to-neon-green hover:from-blue-600 hover:to-green-600 rounded-full px-6 py-3 font-semibold shadow-md transition-all transform hover:scale-105 text-white"
+                >
+                  🎭 Create Your First Lobby
+                </Link>
               </div>
             )}
           </>

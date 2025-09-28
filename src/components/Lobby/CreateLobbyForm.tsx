@@ -12,7 +12,7 @@ interface LobbyConfig {
 }
 
 interface CreateLobbyProps {
-  onLobbyCreated?: (lobbyId: string, lobbyAddress: string) => void;
+  onLobbyCreated?: (lobbyId: string, lobbyAddress: string, config: LobbyConfig) => void;
 }
 
 export function CreateLobbyForm({ onLobbyCreated }: CreateLobbyProps) {
@@ -29,7 +29,7 @@ export function CreateLobbyForm({ onLobbyCreated }: CreateLobbyProps) {
   const [error, setError] = useState<string | null>(null);
 
   const handleCreateLobby = async () => {
-    if (!CONTRACT_ADDRESSES.LobbyRegistry || CONTRACT_ADDRESSES.LobbyRegistry === '0x0000000000000000000000000000000000000000') {
+    if (!CONTRACT_ADDRESSES.LobbyRegistry || (CONTRACT_ADDRESSES.LobbyRegistry as string) === '0x0000000000000000000000000000000000000000') {
       setError('Contracts not deployed. Please deploy contracts first.');
       return;
     }
@@ -38,8 +38,12 @@ export function CreateLobbyForm({ onLobbyCreated }: CreateLobbyProps) {
     setError(null);
 
     try {
-      // Mock successful creation
-      onLobbyCreated?.('1', '0x1234567890123456789012345678901234567890');
+      // TODO: Implement actual contract call for lobby creation
+      // For now, create mock lobby data
+      const mockLobbyId = Date.now();
+      const mockLobbyAddress = `0x${Math.random().toString(16).substr(2, 40)}`;
+
+      onLobbyCreated?.(mockLobbyId.toString(), mockLobbyAddress, config);
     } catch (err) {
       console.error('Error creating lobby:', err);
       setError(err instanceof Error ? err.message : 'Failed to create lobby');

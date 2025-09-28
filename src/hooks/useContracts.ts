@@ -58,7 +58,7 @@ export function useLobbies() {
             joinTimeoutSeconds: 300,
           },
           metadataURI: 'Mock Lobby 1',
-          createdAt: BigInt(Date.now()),
+          createdAt: BigInt(Math.floor(Date.now() / 1000)),
         },
         {
           lobbyAddress: '0x0987654321098765432109876543210987654321',
@@ -70,21 +70,43 @@ export function useLobbies() {
             joinTimeoutSeconds: 600,
           },
           metadataURI: 'Mock Lobby 2',
-          createdAt: BigInt(Date.now() - 3600000), // 1 hour ago
+          createdAt: BigInt(Math.floor(Date.now() / 1000) - 3600), // 1 hour ago
         },
       ];
-      setLobbies(mockLobbies);
-      setError(null); // Clear error since we have fallback
+
+      // Add any locally created lobbies
+      const localLobbies = JSON.parse(localStorage.getItem('mafia-party-lobbies') || '[]');
+      const allLobbies = [...mockLobbies, ...localLobbies.map((lobby: {id: string, address: string, name: string, config: {minPlayers: number, maxPlayers: number, isPrivate: boolean}}) => ({
+        lobbyAddress: lobby.address,
+        creator: '0x' + '0'.repeat(40), // mock creator
+        config: {
+          minPlayers: lobby.config.minPlayers,
+          maxPlayers: lobby.config.maxPlayers,
+          isPrivate: lobby.config.isPrivate,
+          joinTimeoutSeconds: 300,
+        },
+        metadataURI: lobby.name || `Lobby ${lobby.id}`,
+        createdAt: BigInt(Math.floor(Date.now() / 1000)),
+      }))];
+
+      setLobbies(allLobbies);
     } finally {
       setLoading(false);
     }
+  };
+
+  const addLocalLobby = (id: string, address: string, name: string, config: {minPlayers: number, maxPlayers: number, isPrivate: boolean}) => {
+    const localLobbies = JSON.parse(localStorage.getItem('mafia-party-lobbies') || '[]');
+    localLobbies.push({ id, address, name, config });
+    localStorage.setItem('mafia-party-lobbies', JSON.stringify(localLobbies));
+    fetchLobbies(); // Refresh the list
   };
 
   useEffect(() => {
     fetchLobbies();
   }, []);
 
-  return { lobbies, loading, error, refetch: fetchLobbies };
+  return { lobbies, loading, error, refetch: fetchLobbies, addLocalLobby };
 }
 
 export function useLobbyPhase(lobbyAddress: string | null) {

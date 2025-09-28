@@ -10,7 +10,8 @@ import { RoleReveal } from '@/components/Lobby/RoleReveal';
 import { NightAction } from '@/components/Lobby/NightAction';
 import { DayVote } from '@/components/Lobby/DayVote';
 import { BotMenu } from '@/components/Lobby/BotMenu';
-import { Marble, TopBar } from '@worldcoin/mini-apps-ui-kit-react';
+import { ChatPanel } from '@/components/Lobby/ChatPanel';
+import { Marble, TopBar, Button } from '@worldcoin/mini-apps-ui-kit-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 
@@ -89,6 +90,16 @@ interface SessionType {
   const [bots, setBots] = useState<{ id: string; name: string }[]>([]);
   const [userRole, setUserRole] = useState<string>('');
   const [roleRevealed, setRoleRevealed] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [messages, setMessages] = useState([
+    {
+      id: '1',
+      sender: 'Oracle',
+      content: 'Welcome to Mafia Party! Discuss strategy and vote wisely.',
+      isBot: true,
+      timestamp: new Date(),
+    },
+  ]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -135,6 +146,17 @@ interface SessionType {
     // Advance to next round or end
   };
 
+  const handleSendMessage = (content: string) => {
+    const newMessage = {
+      id: Date.now().toString(),
+      sender: session?.user.username || 'You',
+      content,
+      isBot: false,
+      timestamp: new Date(),
+    };
+    setMessages(prev => [...prev, newMessage]);
+  };
+
   return (
     <>
             <Page.Header className="p-0 bg-gradient-to-r from-purple-900 to-blue-900">
@@ -147,11 +169,15 @@ interface SessionType {
           }
           endAdornment={
             <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setChatOpen(true)}
+                className="bg-soft-gold hover:bg-yellow-500 rounded-full px-3 py-1 font-semibold shadow-md transition-all transform hover:scale-105 text-black text-sm"
+              >
+                💬 Chat
+              </Button>
               <p className="text-sm font-semibold capitalize text-white">
-                {/* @ts-expect-error */}
                 {session?.user.username}
               </p>
-              {/* @ts-expect-error */}
               {session?.user.profilePictureUrl ? (
                 <Marble src={session.user.profilePictureUrl} className="w-12 border-2 border-neon-green" />
               ) : null}
@@ -199,6 +225,14 @@ interface SessionType {
           <EventFeed items={eventFeed} />
         </div>
       </Page.Main>
+
+      <ChatPanel
+        isOpen={chatOpen}
+        onClose={() => setChatOpen(false)}
+        messages={messages}
+        onSendMessage={handleSendMessage}
+        currentUser={session?.user.username || 'You'}
+      />
     </>
   );
 }

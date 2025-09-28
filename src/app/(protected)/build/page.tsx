@@ -4,12 +4,16 @@ import { Page } from '@/components/PageLayout';
 import { TopBar } from '@worldcoin/mini-apps-ui-kit-react';
 import { CreateLobbyForm } from '@/components/Lobby/CreateLobbyForm';
 import { useState } from 'react';
+import { useLobbies } from '@/hooks/useContracts';
 
 export default function Build() {
   const [createdLobby, setCreatedLobby] = useState<{ id: string; address: string } | null>(null);
+  const { addLocalLobby } = useLobbies();
 
-  const handleLobbyCreated = (lobbyId: string, lobbyAddress: string) => {
+  const handleLobbyCreated = (lobbyId: string, lobbyAddress: string, config: {minPlayers: number, maxPlayers: number, isPrivate: boolean}) => {
     setCreatedLobby({ id: lobbyId, address: lobbyAddress });
+    // Also save to local storage for persistence
+    addLocalLobby(lobbyId, lobbyAddress, `Lobby ${lobbyId}`, config);
   };
 
   return (
