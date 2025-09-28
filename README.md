@@ -1,34 +1,79 @@
-## Create a Mini App
+# mafia-party
 
-[Mini apps](https://docs.worldcoin.org/mini-apps) enable third-party developers to create native-like applications within World App.
+A Mafia Party Mini App built with Next.js, World ID authentication, and on-chain game mechanics.
 
-This template is a way for you to quickly get started with authentication and examples of some of the trickier commands.
+## Features
+
+- **World ID Authentication**: Secure player verification using World ID
+- **Lobby System**: Create and join game lobbies
+- **Role-Based Gameplay**: Mafia, Detective, Doctor, and Villager roles
+- **Night/Day Phases**: Strategic gameplay with timed phases
+- **On-Chain Proofs**: Verifiable game outcomes using smart contracts
+- **Bot Support**: AI players to fill lobbies
+- **Real-time Chat**: In-game communication system
 
 ## Getting Started
 
-1. cp .env.example .env.local
-2. Follow the instructions in the .env.local file
-3. Run `npm run dev`
-4. Run `ngrok http 3000`
-5. Run `npx auth secret` to update the `AUTH_SECRET` in the .env.local file
-6. Set `AUTH_TRUST_HOST=true` in `.env.local` while developing locally (or add your full public domain when deploying).
-7. Add your domain to the `allowedDevOrigins` in the next.config.ts file.
-8. [For Testing] If you're using a proxy like ngrok, you need to update the `AUTH_URL` in the .env.local file to your ngrok url.
-9. Continue to developer.worldcoin.org and make sure your app is connected to the right ngrok url
-10. [Optional] For Verify and Send Transaction to work you need to do some more setup in the dev portal. The steps are outlined in the respective component files.
+1. Clone the repository
+2. Install dependencies: `npm install`
+3. Copy environment file: `cp .env.example .env.local`
+4. Configure your environment variables
+5. Run development server: `npm run dev`
+6. Set up ngrok: `ngrok http 3000`
+7. Update your Mini App configuration in the World Developer Portal
 
-## Authentication
+## Tech Stack
 
-This starter kit uses [Minikit's](https://github.com/worldcoin/minikit-js) wallet auth to authenticate users, and [next-auth](https://authjs.dev/getting-started) to manage sessions.
+- **Frontend**: Next.js 15, React, TypeScript
+- **Styling**: Tailwind CSS, Mini Apps UI Kit
+- **Authentication**: World ID, NextAuth.js
+- **Blockchain**: Foundry, viem, World Chain
+- **Database**: Supabase (planned)
+- **Deployment**: Vercel/ngrok for development
 
-## UI Library
+## Game Rules
 
-This starter kit uses [Mini Apps UI Kit](https://github.com/worldcoin/mini-apps-ui-kit) to style the app. We recommend using the UI kit to make sure you are compliant with [World App's design system](https://docs.world.org/mini-apps/design/app-guidelines).
+### Objective
+Mafia must eliminate all villagers, while villagers must identify and eliminate all mafia members.
 
-## Eruda
+### Roles
+- **Mafia**: Kill one player each night
+- **Detective**: Investigate one player's alignment each night
+- **Doctor**: Protect one player from mafia attacks each night
+- **Villager**: Vote during the day to eliminate suspected mafia
 
-[Eruda](https://github.com/liriliri/eruda) is a tool that allows you to inspect the console while building as a mini app. You should disable this in production.
+### Phases
+1. **Night Phase**: Special roles perform actions
+2. **Day Phase**: Discussion and voting to eliminate a player
+3. **Repeat** until one side wins
+
+## Development
+
+### Smart Contracts
+Located in `/contracts` directory. Built with Foundry.
+
+```bash
+cd contracts
+forge test
+forge script script/DeployMafiaContracts.s.sol --rpc-url worldchain_sepolia
+```
+
+### Frontend
+Located in `/src` directory. Built with Next.js.
+
+```bash
+npm run dev
+npm run build
+```
 
 ## Contributing
 
-This template was made with help from the amazing [supercorp-ai](https://github.com/supercorp-ai) team.
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## License
+
+MIT License
