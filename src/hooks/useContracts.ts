@@ -35,7 +35,13 @@ export function useLobbies() {
       setLoading(true);
       setError(null);
       
-      const lobbyCount = await contractService.getLobbyCount();
+      // Add a timeout to prevent hanging
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Request timeout')), 10000);
+      });
+      
+      const lobbyCountPromise = contractService.getLobbyCount();
+      const lobbyCount = await Promise.race([lobbyCountPromise, timeoutPromise]) as bigint;
       const lobbyPromises: Promise<LobbyRecord>[] = [];
       
       for (let i = 0; i < Number(lobbyCount); i++) {
@@ -46,6 +52,8 @@ export function useLobbies() {
       setLobbies(lobbyData);
     } catch (err) {
       console.error('Error fetching lobbies:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch lobbies';
+      setError(errorMessage);
       // Fallback to mock data for MVP testing
       const mockLobbies: LobbyRecord[] = [
         {

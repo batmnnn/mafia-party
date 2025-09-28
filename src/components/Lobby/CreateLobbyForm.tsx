@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Button, LiveFeedback } from '@worldcoin/mini-apps-ui-kit-react';
 import { CONTRACT_ADDRESSES } from '@/lib/contracts';
+import { lobbyManager } from '@/lib/lobbyManager';
 
 interface LobbyConfig {
   minPlayers: number;
@@ -12,23 +13,39 @@ interface LobbyConfig {
 }
 
 interface CreateLobbyProps {
-  onLobbyCreated?: (lobbyId: string, lobbyAddress: string, config: LobbyConfig) => void;
+  onLobbyCreated?: (lobbyId: string, lobbyAddress: string, config: LobbyConfig, joinCode: string) => void;
+  session?: {
+    user: {
+      walletAddress: string;
+      username: string;
+      profilePictureUrl: string;
+    };
+  } | null;
 }
 
-export function CreateLobbyForm({ onLobbyCreated }: CreateLobbyProps) {
+export function CreateLobbyForm({ onLobbyCreated, session }: CreateLobbyProps) {
   const [config, setConfig] = useState<LobbyConfig>({
     minPlayers: 4,
     maxPlayers: 8,
     isPrivate: false,
     joinTimeoutSeconds: 300, // 5 minutes
   });
-  
-  const [joinCode, setJoinCode] = useState('');
+
   const [metadataURI, setMetadataURI] = useState('');
   const [isCreating, setIsCreating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Generate a 6-digit join code
+  const generateJoinCode = (): string => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  };
+
   const handleCreateLobby = async () => {
+    if (!session?.user) {
+      setError('You must be logged in to create a lobby');
+      return;
+    }
+
     if (!CONTRACT_ADDRESSES.LobbyRegistry || (CONTRACT_ADDRESSES.LobbyRegistry as string) === '0x0000000000000000000000000000000000000000') {
       setError('Contracts not deployed. Please deploy contracts first.');
       return;
@@ -38,12 +55,22 @@ export function CreateLobbyForm({ onLobbyCreated }: CreateLobbyProps) {
     setError(null);
 
     try {
-      // TODO: Implement actual contract call for lobby creation
-      // For now, create mock lobby data
-      const mockLobbyId = Date.now();
+      // Generate 6-digit join code
+      const joinCode = generateJoinCode();
+
+      // Create lobby using lobby manager
+      const lobbyId = Date.now().toString();
       const mockLobbyAddress = `0x${Math.random().toString(16).substr(2, 40)}`;
 
-      onLobbyCreated?.(mockLobbyId.toString(), mockLobbyAddress, config);
+      lobbyManager.createLobby(
+        lobbyId,
+        joinCode,
+        config,
+        session.user.walletAddress,
+        session.user.username || 'Anonymous Player'
+      );
+
+      onLobbyCreated?.(lobbyId, mockLobbyAddress, config, joinCode);
     } catch (err) {
       console.error('Error creating lobby:', err);
       setError(err instanceof Error ? err.message : 'Failed to create lobby');
@@ -109,21 +136,6 @@ export function CreateLobbyForm({ onLobbyCreated }: CreateLobbyProps) {
           Private Lobby (requires join code)
         </label>
       </div>
-
-      {config.isPrivate && (
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">
-            Join Code
-          </label>
-          <input
-            type="text"
-            value={joinCode}
-            onChange={(e) => setJoinCode(e.target.value)}
-            placeholder="Enter join code"
-            className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
-          />
-        </div>
-      )}
 
       <div>
         <label className="block text-sm font-medium text-slate-700 mb-1">

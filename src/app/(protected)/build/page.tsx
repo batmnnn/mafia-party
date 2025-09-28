@@ -5,13 +5,15 @@ import { TopBar } from '@worldcoin/mini-apps-ui-kit-react';
 import { CreateLobbyForm } from '@/components/Lobby/CreateLobbyForm';
 import { useState } from 'react';
 import { useLobbies } from '@/hooks/useContracts';
+import { useSession } from 'next-auth/react';
 
 export default function Build() {
-  const [createdLobby, setCreatedLobby] = useState<{ id: string; address: string } | null>(null);
+  const [createdLobby, setCreatedLobby] = useState<{ id: string; address: string; joinCode: string } | null>(null);
   const { addLocalLobby } = useLobbies();
+  const { data: session } = useSession();
 
-  const handleLobbyCreated = (lobbyId: string, lobbyAddress: string, config: {minPlayers: number, maxPlayers: number, isPrivate: boolean}) => {
-    setCreatedLobby({ id: lobbyId, address: lobbyAddress });
+  const handleLobbyCreated = (lobbyId: string, lobbyAddress: string, config: {minPlayers: number, maxPlayers: number, isPrivate: boolean}, joinCode: string) => {
+    setCreatedLobby({ id: lobbyId, address: lobbyAddress, joinCode });
     // Also save to local storage for persistence
     addLocalLobby(lobbyId, lobbyAddress, `Lobby ${lobbyId}`, config);
   };
@@ -40,6 +42,9 @@ export default function Build() {
               <div>
                 <span className="font-medium">Address:</span> {createdLobby.address}
               </div>
+              <div>
+                <span className="font-medium">Join Code:</span> <span className="text-2xl font-bold text-primary">{createdLobby.joinCode}</span>
+              </div>
             </div>
             <button
               onClick={() => setCreatedLobby(null)}
@@ -56,7 +61,7 @@ export default function Build() {
             <p className="text-sm text-slate-600 mb-6">
               Set up the rules and settings for your Mafia Party game. Players will be able to join once you create the lobby.
             </p>
-            <CreateLobbyForm onLobbyCreated={handleLobbyCreated} />
+            <CreateLobbyForm onLobbyCreated={handleLobbyCreated} session={session} />
           </div>
         )}
 

@@ -1,17 +1,15 @@
 type Player = {
   id: string;
   name: string;
-  status: 'alive' | 'eliminated' | 'protected' | 'roleblocked';
-  avatar?: string;
-  note?: string;
-  isSelf?: boolean;
+  role: string;
+  hp: number;
+  isAlive: boolean;
+  isUser: boolean;
 };
 
-const statusStyles: Record<Player['status'], string> = {
+const statusStyles: Record<string, string> = {
   alive: 'bg-emerald-50 text-emerald-600',
-  eliminated: 'bg-rose-50 text-rose-600',
-  protected: 'bg-sky-50 text-sky-600',
-  roleblocked: 'bg-amber-50 text-amber-700',
+  dead: 'bg-rose-50 text-rose-600',
 };
 
 export const PlayerRoster = ({ players }: { players: Player[] }) => {
@@ -33,20 +31,18 @@ export const PlayerRoster = ({ players }: { players: Player[] }) => {
             <div>
               <p className="text-sm font-semibold text-slate-900">
                 {player.name}
-                {player.isSelf ? (
+                {player.isUser ? (
                   <span className="ml-2 rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-semibold text-indigo-600">
                     You
                   </span>
                 ) : null}
               </p>
-              {player.note ? (
-                <p className="text-xs text-slate-500">{player.note}</p>
-              ) : null}
+              <p className="text-xs text-slate-500">HP: {player.hp} | Role: {player.role}</p>
             </div>
             <span
-              className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[player.status]}`}
+              className={`rounded-full px-3 py-1 text-xs font-semibold ${statusStyles[player.isAlive ? 'alive' : 'dead']}`}
             >
-              {player.status}
+              {player.isAlive ? 'Alive' : 'Dead'}
             </span>
           </li>
         ))}

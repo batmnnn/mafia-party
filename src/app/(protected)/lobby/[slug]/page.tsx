@@ -1,6 +1,6 @@
 'use client';
 
-import { auth } from '@/auth';
+import { GameState } from '@/lib/gameEngine';
 import { Page } from '@/components/PageLayout';
 import { ActionPanel } from '@/components/Lobby/ActionPanel';
 import { EventFeed } from '@/components/Lobby/EventFeed';
@@ -14,15 +14,9 @@ import { ChatPanel } from '@/components/Lobby/ChatPanel';
 import { Marble, TopBar, Button } from '@worldcoin/mini-apps-ui-kit-react';
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
-
-const samplePlayers = [
-  { id: '1', name: 'Selina', status: 'alive' as const },
-  { id: '2', name: 'Harvey', status: 'alive' as const },
-  { id: '3', name: 'Pamela', status: 'protected' as const, note: 'Guarded last night' },
-  { id: '4', name: 'Edward', status: 'roleblocked' as const, note: 'Blocked by Falcone' },
-  { id: '5', name: 'Oswald', status: 'eliminated' as const, note: 'Voted out Day 2' },
-  { id: 'self', name: 'Bruce', status: 'alive' as const, isSelf: true, note: 'Detective role' },
-];
+import { useSession } from 'next-auth/react';
+import { useParams } from 'next/navigation';
+import { LobbyState } from '@/lib/lobbyManager';
 
 const abilityCards = [
   {
@@ -71,26 +65,17 @@ const eventFeed = [
   },
 ];
 
-export default function LobbyDetail({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const [slug, setSlug] = useState<string>('');
-interface SessionType {
-  user: {
-    username: string;
-    profilePictureUrl?: string;
-  };
-}
+export default function LobbyDetail() {
+  const { data: session } = useSession();
+  const params = useParams();
+  const lobbyId = params.slug as string;
 
-  const [session, setSession] = useState<SessionType | null>(null);
-  const [gamePhase, setGamePhase] = useState<'lobby' | 'night' | 'day'>('lobby');
-  const [players, setPlayers] = useState(samplePlayers);
-  const [bots, setBots] = useState<{ id: string; name: string }[]>([]);
+  const [lobby, setLobby] = useState<LobbyState | null>(null);
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [userRole, setUserRole] = useState<string>('');
   const [roleRevealed, setRoleRevealed] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [remainingTime, setRemainingTime] = useState(0);
   const [messages, setMessages] = useState([
     {
       id: '1',
@@ -101,49 +86,113 @@ interface SessionType {
     },
   ]);
 
+  // Fetch lobby data on mount
   useEffect(() => {
-    const fetchData = async () => {
-      const s = await auth();
-      setSession(s);
-      const p = await params;
-      setSlug(p.slug);
+    const fetchLobby = async () => {
+      if (!lobbyId || !session) return;
+
+      try {
+        const response = await fetch(`/api/get-lobby?lobbyId=${lobbyId}`);
+        const data = await response.json();
+
+        if (data.error) {
+          console.error('Error fetching lobby:', data.error);
+          return;
+        }
+
+        setLobby(data);
+        setGameState(data.gameState);
+        setRemainingTime(data.remainingTime);
+
+        // Set user role if game has started
+        if (data.gameState?.players) {
+          const userPlayer = data.gameState.players.find((p: { isUser: boolean }) => p.isUser);
+          if (userPlayer) setUserRole(userPlayer.role);
+        }
+      } catch (error) {
+        console.error('Error fetching lobby:', error);
+      }
     };
-    fetchData();
-  }, [params]);
+
+    fetchLobby();
+
+    // Poll for updates every 5 seconds
+    const interval = setInterval(fetchLobby, 5000);
+    return () => clearInterval(interval);
+  }, [lobbyId, session]);
 
   const handleStartGame = async () => {
+    if (!lobbyId) return;
+
     const response = await fetch('/api/start-game', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ lobbyId: slug }),
+      body: JSON.stringify({ lobbyId }),
     });
     const data = await response.json();
-    setPlayers(data.players);
-    setGamePhase('night');
-    // Assign user role
-    const userPlayer = data.players.find((p: { id: string; role: string }) => p.id === 'user1');
+
+    if (data.error) {
+      console.error('Error starting game:', data.error);
+      return;
+    }
+
+    setGameState(data.gameState);
+    setLobby(prev => prev ? { ...prev, status: 'in-progress', gameState: data.gameState } : null);
+
+    // Set user role
+    const userPlayer = data.gameState.players.find((p: { isUser: boolean }) => p.isUser);
     if (userPlayer) setUserRole(userPlayer.role);
   };
 
-  const handleAddBot = () => {
-    const newBot = { id: `bot${bots.length + 1}`, name: `Bot${bots.length + 1}` };
-    setBots([...bots, newBot]);
+  const handleAddBot = async (botCount: number) => {
+    if (!lobbyId) return;
+
+    const response = await fetch('/api/add-bots', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lobbyId, botCount }),
+    });
+    const data = await response.json();
+
+    if (data.error) {
+      console.error('Error adding bots:', data.error);
+      return;
+    }
+
+    setLobby(data.lobby);
   };
 
   const handleRemoveBot = (botId: string) => {
-    setBots(bots.filter(b => b.id !== botId));
+    // TODO: Implement bot removal
+    console.log('Remove bot:', botId);
   };
 
-  const handleNightAction = (targetId: string) => {
-    // Simulate night action
-    console.log(`${userRole} targets ${targetId}`);
-    setGamePhase('day');
+  const handleNightAction = async (targetId: string, actionType: string) => {
+    if (!gameState) return;
+
+    const response = await fetch('/api/night-action', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: actionType, targetId }),
+    });
+    const data = await response.json();
+    if (data.success) {
+      setGameState(data.gameState);
+    }
   };
 
-  const handleDayVote = (targetId: string) => {
-    // Simulate vote
-    console.log(`Voted for ${targetId}`);
-    // Advance to next round or end
+  const handleDayVote = async (targetId: string) => {
+    if (!gameState) return;
+
+    const response = await fetch('/api/cast-vote', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ targetId }),
+    });
+    const data = await response.json();
+    if (data.success) {
+      setGameState(data.gameState);
+    }
   };
 
   const handleSendMessage = (content: string) => {
@@ -159,11 +208,11 @@ interface SessionType {
 
   return (
     <>
-            <Page.Header className="p-0 bg-gradient-to-r from-purple-900 to-blue-900">
+            <Page.Header className="p-0 bg-gradient-to-r from-amber-900 to-yellow-800">
         <TopBar
           title="Mafia Party"
           startAdornment={
-            <Link href="/lobbies" className="text-sm font-semibold text-electric-blue">
+            <Link href="/lobbies" className="text-sm font-semibold text-yellow-300 hover:text-yellow-100">
               ← Lobbies
             </Link>
           }
@@ -171,11 +220,11 @@ interface SessionType {
             <div className="flex items-center gap-2">
               <Button
                 onClick={() => setChatOpen(true)}
-                className="bg-soft-gold hover:bg-yellow-500 rounded-full px-3 py-1 font-semibold shadow-md transition-all transform hover:scale-105 text-black text-sm"
+                className="bg-yellow-600 hover:bg-yellow-500 rounded-full px-3 py-1 font-semibold shadow-md transition-all transform hover:scale-105 text-amber-900 text-sm"
               >
                 💬 Chat
               </Button>
-              <p className="text-sm font-semibold capitalize text-white">
+              <p className="text-sm font-semibold capitalize text-amber-100">
                 {session?.user.username}
               </p>
               {session?.user.profilePictureUrl ? (
@@ -187,38 +236,90 @@ interface SessionType {
       </Page.Header>
 
       <Page.Main className="mb-20 flex flex-col gap-4">
-        {gamePhase === 'lobby' && (
+        {!gameState ? (
           <>
-            <BotMenu onAddBot={handleAddBot} onRemoveBot={handleRemoveBot} bots={bots} />
-            <button onClick={handleStartGame} className="bg-green-500 text-white px-4 py-2 rounded">
-              Start Game
-            </button>
-          </>
-        )}
+            {/* Lobby Info */}
+            {lobby && (
+              <div className="card-mafia rounded-3xl p-6 text-center animate-fade-in-up">
+                <h2 className="text-2xl font-bold text-glow mb-4">🎭 Lobby #{lobby.id.slice(-4)}</h2>
+                <div className="grid grid-cols-2 gap-4 mb-6">
+                  <div className="bg-black/20 rounded-xl p-4">
+                    <p className="text-sm text-neutral-light">Join Code</p>
+                    <p className="text-3xl font-bold text-primary">{lobby.joinCode}</p>
+                  </div>
+                  <div className="bg-black/20 rounded-xl p-4">
+                    <p className="text-sm text-neutral-light">Players</p>
+                    <p className="text-2xl font-bold text-secondary">
+                      {lobby.players.filter(p => !p.isBot).length}/{lobby.config.maxPlayers}
+                    </p>
+                  </div>
+                </div>
+                <p className="text-neutral-light text-sm">
+                  Share the join code with friends to let them join your game!
+                </p>
+              </div>
+            )}
 
-        {gamePhase !== 'lobby' && (
+            <BotMenu
+              onAddBot={handleAddBot}
+              onRemoveBot={handleRemoveBot}
+              bots={lobby?.players.filter(p => p.isBot).map(p => ({ id: p.id, name: p.name })) || []}
+              maxBots={lobby ? Math.max(0, lobby.players.filter(p => !p.isBot).length - 1) : 3}
+            />
+
+            {lobby && lobby.hostId === session?.user.walletAddress && (
+              <button
+                onClick={handleStartGame}
+                disabled={lobby.players.filter(p => !p.isBot).length < lobby.config.minPlayers}
+                className="btn-mafia w-full py-4 rounded-2xl text-lg font-semibold transition-all duration-300 hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                🎮 Start Game ({lobby.players.filter(p => !p.isBot).length}/{lobby.config.minPlayers} players needed)
+              </button>
+            )}
+          </>
+        ) : (
           <>
             <RoleReveal role={userRole} isRevealed={roleRevealed} onReveal={() => setRoleRevealed(true)} />
-            {gamePhase === 'night' && (
-              <NightAction role={userRole} players={players} onAction={handleNightAction} />
+
+            {/* Phase Timer */}
+            {remainingTime > 0 && (
+              <div className="card-mafia rounded-2xl p-4 text-center animate-pulse-glow">
+                <div className="text-2xl font-bold text-primary mb-1">
+                  {Math.ceil(remainingTime / 1000)}s
+                </div>
+                <div className="text-sm text-neutral-light capitalize">
+                  {gameState.currentPhase} Phase
+                </div>
+              </div>
             )}
-            {gamePhase === 'day' && (
-              <DayVote players={players} onVote={handleDayVote} />
+
+            {gameState.currentPhase === 'night' && (
+              <NightAction role={userRole} players={gameState.players} onAction={(targetId) => {
+                const actionType = userRole === 'Mafia' ? 'mafia_kill' :
+                                 userRole === 'Detective' ? 'detective_test' :
+                                 userRole === 'Healer' ? 'healer_heal' : '';
+                handleNightAction(targetId, actionType);
+              }} />
+            )}
+            {gameState.currentPhase === 'day' && (
+              <DayVote players={gameState.players} onVote={handleDayVote} />
             )}
           </>
         )}
 
-        <PhaseSummary
-          phase={gamePhase === 'lobby' ? 'Lobby' : gamePhase === 'night' ? 'Night' : 'Day'}
-          round={1}
-          deadlineLabel={gamePhase === 'lobby' ? '' : 'Ends in 11m'}
-          host="Oracle"
-          info={gamePhase === 'lobby' ? 'Waiting to start' : gamePhase === 'night' ? 'Perform night actions' : 'Discuss and vote'}
-        />
+        {gameState && (
+          <PhaseSummary
+            phase={gameState.currentPhase === 'night' ? 'Night' : gameState.currentPhase === 'day' ? 'Day' : 'Lobby'}
+            round={gameState.round}
+            deadlineLabel={gameState ? 'Ends in 11m' : ''}
+            host="Oracle"
+            info={gameState.currentPhase === 'night' ? 'Perform night actions' : gameState.currentPhase === 'day' ? 'Discuss and vote' : 'Waiting to start'}
+          />
+        )}
 
         <div className="grid gap-4 lg:grid-cols-[2fr,1fr]">
           <div className="flex flex-col gap-4">
-            <PlayerRoster players={players} />
+            {gameState && <PlayerRoster players={gameState.players} />}
             <ActionPanel heading="Tonight's toolkit" cards={abilityCards} />
           </div>
 

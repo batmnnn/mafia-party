@@ -1,27 +1,54 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { MafiaGameEngine } from '@/lib/gameEngine';
+import { lobbyManager } from '@/lib/lobbyManager';
 
-const roles = ['Godfather', 'Mafia', 'Mafia', 'Detective', 'Doctor', 'Insomniac', 'Villager', 'Villager'];
-
-export async function POST() {
+export async function POST(request: Request) {
   const session = await auth();
   if (!session) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  // const body = await request.json();
+  const body = await request.json();
+  const { lobbyId }: { lobbyId: string } = body;
 
-  // Simulate role assignment: shuffle roles and assign to players + bots
-  const shuffledRoles = [...roles].sort(() => Math.random() - 0.5);
-  const players = [
-    { id: 'user1', name: 'User1', role: shuffledRoles[0] },
-    { id: 'bot1', name: 'Bot1', role: shuffledRoles[1] },
-    { id: 'bot2', name: 'Bot2', role: shuffledRoles[2] },
-    // Add more as needed up to 8
-  ];
+  if (!lobbyId) {
+    return NextResponse.json({ error: 'Lobby ID required' }, { status: 400 });
+  }
 
-  // Store in a mock DB or Supabase later
-  // For now, return the assigned roles
+  try {
+    const lobby = lobbyManager.getLobby(lobbyId);
+    if (!lobby) {
+      return NextResponse.json({ error: 'Lobby not found' }, { status: 404 });
+    }
 
-  return NextResponse.json({ players, gameStarted: true });
+    if (lobby.hostId !== session.user.walletAddress) {
+      return NextResponse.json({ error: 'Only the host can start the game' }, { status: 403 });
+    }
+
+    // Start the game
+    const success = lobbyManager.startGame(lobbyId, session.user.walletAddress);
+    if (!success) {
+      return NextResponse.json({ error: 'Cannot start game' }, { status: 400 });
+    }
+
+    // Create game engine with all players (including bots)
+    const playerCount = lobby.players.length;
+    const gameEngine = new MafiaGameEngine(playerCount);
+
+    // Update lobby with game state
+    lobbyManager.updateGameState(lobbyId, gameEngine.getGameState());
+
+    return NextResponse.json({
+      gameState: gameEngine.getGameState(),
+      gameStarted: true,
+      message: 'Game started successfully!'
+    });
+  } catch (error) {
+    console.error('Error starting game:', error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'Failed to start game' },
+      { status: 400 }
+    );
+  }
 }

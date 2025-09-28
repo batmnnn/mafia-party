@@ -7,7 +7,7 @@ import { CONTRACT_ADDRESSES, CONTRACT_ABIS, type ContractName } from './contract
 // Create a public client for reading from contracts
 export const publicClient = createPublicClient({
   chain: worldchain,
-  transport: http('https://worldchain-mainnet.g.alchemy.com/public'),
+  transport: http('https://worldchain-sepolia.g.alchemy.com/public'),
 });
 
 // Contract interaction utilities
@@ -41,12 +41,14 @@ export class ContractService {
 
   // Get lobby count
   async getLobbyCount(): Promise<bigint> {
-    return await this.readContract('LobbyRegistry', 'getLobbyCount');
+    const result = await this.readContract<bigint>('LobbyRegistry', 'getLobbyCount');
+    return result;
   }
 
   // Get lobby record
   async getLobbyRecord(lobbyId: bigint) {
-    return await this.readContract('LobbyRegistry', 'getLobbyRecord', [lobbyId]);
+    const result = await this.readContract('LobbyRegistry', 'getLobbyRecord', [lobbyId]);
+    return result;
   }
 
   // Check if lobby is locked
